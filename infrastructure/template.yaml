@@ -11,6 +11,7 @@ Parameters:
         Description: 'The name of the S3 bucket to store the lambda code'
         Default: "iabd-sourcecode-management-bucket"
 
+
 Resources:
   # IAM Role for lambda function
   LambdaExecutionRole:
@@ -54,8 +55,7 @@ Resources:
       Code: ../src
       Environment:
         Variables:
-          DYNAMODB_TABLE: !Ref DynamoDBTable
-          USER_ID: !Ref Environment
+          DYNAMODB_TABLE_NAME: 's3-trigger-db'
 
   # Permission for S3 to invoke Lambda
   LambdaInvokePermission:
@@ -117,8 +117,10 @@ Resources:
       TableName: !Sub '${Environment}-s3-trigger-db'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: userId
+        - AttributeName: PK
           AttributeType: S
       KeySchema:
-        - AttributeName: userId
+        - AttributeName: PK
           KeyType: HASH
+
+

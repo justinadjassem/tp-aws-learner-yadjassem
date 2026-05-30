@@ -5,8 +5,7 @@ from datetime import datetime
 
 
 dynamodb = boto3.resource('dynamodb')
-TABLE_NAME = os.environ.get('DYNAMODB_TABLE')
-USER_ID = os.environ.get('USER_ID')
+TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
 
 
 def lambda_handler(event, context):
@@ -21,36 +20,36 @@ def lambda_handler(event, context):
         size = record['s3']['object'].get('size', 0)
         file_name = key.split('/')[-1]
 
-        # Check if file already exists in DynamoDB
-        response = table.get_item(Key={'userId': USER_ID})
-        file_list = response.get('Item', {}).get('fileList', [])
+        # Check if item exists in DynamoDB
+        response = table.get_item(Key={'PK': 'yadjassem'})
 
-        existing_files = [f['fileName'] for f in file_list]
-
-        if file_name in existing_files:
-            print(f"File already exists: {file_name}")
-            results.append({'fileName': file_name, 'status': 'already_exists'})
+        if 'Item' not in response:
+            # Item doesn't exist, create it with the filename
+            item = {'PK': 'yadjassem', 'filename': [file_name]}
+            table.put_item(Item=item)
+            print(f"Item created with file: {file_name}")
+            results.append({'filename': file_name, 'status': 'created'})
             continue
 
-        # Add file to the list
-        new_file = {
-            'fileName': file_name,
-            'fileSize': size,
-            'uploadDate': datetime.utcnow().isoformat(),
-            's3Key': key
-        }
+        file_list = response['Item'].get('filename', [])
 
+        if file_name in file_list:
+            print(f"File already exists: {file_name}")
+            results.append({'filename': file_name, 'status': 'already_exists'})
+            continue
+
+        # Add file to the filename list
         table.update_item(
-            Key={'userId': USER_ID},
-            UpdateExpression='SET fileList = list_append(if_not_exists(fileList, :empty), :newFile)',
+            Key={'PK': 'yadjassem'},
+            UpdateExpression='SET filename = list_append(if_not_exists(filename, :empty), :newFile)',
             ExpressionAttributeValues={
-                ':newFile': [new_file],
+                ':newFile': [file_name],
                 ':empty': []
             }
         )
 
         print(f"File added: s3://{bucket}/{key} ({size} bytes)")
-        results.append({'fileName': file_name, 'status': 'added'})
+        results.append({'filename': file_name, 'status': 'added'})
 
     return {
         'statusCode': 200,
