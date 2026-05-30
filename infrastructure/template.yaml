@@ -37,9 +37,12 @@ Resources:
                 Resource: !Sub 'arn:aws:s3:::${Environment}-${BucketName}/*'
                 # write on the database DynamoDB
               - Effect: Allow
-                Action:
-                  - dynamodb:PutItem,
-                  - dynamodb:GetItem
+                Action: [
+                  dynamodb:PutItem,
+                  dynamodb:GetItem
+                ]
+                Resource: 'arn:aws:dynamodb:*:*:table/s3-trigger-db'
+
   # lambda function to manage s3 events
     LambdaFunction:
      Type: AWS::Lambda::Function
