@@ -55,7 +55,7 @@ Resources:
       Code: ../src
       Environment:
         Variables:
-          DYNAMODB_TABLE_NAME: 's3-trigger-db'
+          DYNAMODB_TABLE_NAME: !Sub '${Environment}-s3-trigger-db'
           USER_ID: !Ref Environment
 
   # Permission for S3 to invoke Lambda
