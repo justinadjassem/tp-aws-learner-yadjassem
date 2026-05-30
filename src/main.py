@@ -1,16 +1,17 @@
-# This is a sample Python script.
+import json
+def lambda_handler(event, context):
+    print("Event: ", json.dumps(event))
 
-# Press Maj+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+    for record in event.get('Records', []):
+        bucket = record['s3']['bucket']['name']
+        key = record['s3']['object']['key']
+        size = record['s3']['object'].get('size', 0)
+        print(f"File uploaded: s3://{bucket}/{key} ({size} bytes)")
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'message': 'S3 event processed successfully',
+            'records_count': len(event.get('Records', []))
+        })
+    }
