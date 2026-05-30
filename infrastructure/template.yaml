@@ -37,11 +37,11 @@ Resources:
                 Resource: !Sub 'arn:aws:s3:::${Environment}-${BucketName}/*'
                 # write on the database DynamoDB
               - Effect: Allow
-                Action: [
-                  dynamodb:PutItem,
-                  dynamodb:GetItem
-                ]
-                Resource: 'arn:aws:dynamodb:*:*:table/s3-trigger-db'
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                Resource: !GetAtt DynamoDBTable.Arn
 
   # lambda function to manage s3 events
   LambdaFunction:
@@ -52,6 +52,10 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.13
       Code: ../src
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref DynamoDBTable
+          USER_ID: !Ref Environment
 
   # Permission for S3 to invoke Lambda
   LambdaInvokePermission:
@@ -71,4 +75,50 @@ Resources:
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.jpg'
             Function: !GetAtt LambdaFunction.Arn
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.jpeg'
+            Function: !GetAtt LambdaFunction.Arn
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.png'
+            Function: !GetAtt LambdaFunction.Arn
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.gif'
+            Function: !GetAtt LambdaFunction.Arn
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.webp'
+            Function: !GetAtt LambdaFunction.Arn
+
+  # DynamoDB table to track uploaded files
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-s3-trigger-db'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
