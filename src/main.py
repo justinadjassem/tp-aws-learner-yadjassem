@@ -6,6 +6,7 @@ from datetime import datetime
 
 dynamodb = boto3.resource('dynamodb')
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
+USER_ID = os.environ.get('USER_ID')
 
 
 def lambda_handler(event, context):
@@ -21,11 +22,11 @@ def lambda_handler(event, context):
         file_name = key.split('/')[-1]
 
         # Check if item exists in DynamoDB
-        response = table.get_item(Key={'PK': 'yadjassem'})
+        response = table.get_item(Key={'PK': USER_ID})
 
         if 'Item' not in response:
             # Item doesn't exist, create it with the filename
-            item = {'PK': 'yadjassem', 'filename': [file_name]}
+            item = {'PK': USER_ID, 'filename': [file_name]}
             table.put_item(Item=item)
             print(f"Item created with file: {file_name}")
             results.append({'filename': file_name, 'status': 'created'})
@@ -40,7 +41,7 @@ def lambda_handler(event, context):
 
         # Add file to the filename list
         table.update_item(
-            Key={'PK': 'yadjassem'},
+            Key={'PK': USER_ID},
             UpdateExpression='SET filename = list_append(if_not_exists(filename, :empty), :newFile)',
             ExpressionAttributeValues={
                 ':newFile': [file_name],
