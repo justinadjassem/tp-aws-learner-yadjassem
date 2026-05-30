@@ -1,0 +1,58 @@
+AWSTemplateFormationVersion: '2012-10-17'
+Description: 'TP2 AWS Lambda'
+
+Parameters:
+    Environment:
+        Type: String
+        Description: 'The environment name we must use our id without the learnaws'
+        Default: "yadjassem"
+    BucketName:
+        Type: String
+        Description: 'The name of the S3 bucket to store the lambda code'
+        Default: "s3-bucket-trigger-lambda"
+Resources:
+  # IAM Role for lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-LambdaExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${Environment}-LambdaS3AccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${Environment}-${BucketName}/*'
+  # lambda function to manage s3 events
+    LambdaFunction:
+     Type: AWS::Lambda::Function
+     Properties:
+        FunctionName: !Sub '${Environment}-S3lambdaTrigger'
+        Handler: main.handler
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Runtime: python3.13
+        Code:
+          S3Bucket: !Sub '${Environment}-${BucketName}'
+          S3Key: 'lambda-code.zip'
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${Environment}-${BucketName}'
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.zip'
+            Function: !GetAtt LambdaFunction.Arn
