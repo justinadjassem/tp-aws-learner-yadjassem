@@ -1,4 +1,4 @@
-AWSTemplateFormationVersion: '2012-10-17'
+AWSTemplateFormatVersion: '2010-09-09'
 Description: 'TP2 AWS Lambda'
 
 Parameters:
@@ -16,7 +16,6 @@ Resources:
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub '${Environment}-LambdaExecutionRole'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -33,7 +32,8 @@ Resources:
             Statement:
               - Effect: Deny
                 Action:
-                  - s3:GetObject, s3:PutObject
+                  - s3:GetObject
+                  - s3:PutObject
                 Resource: !Sub 'arn:aws:s3:::${Environment}-${BucketName}/*'
                 # write on the database DynamoDB
               - Effect: Allow
@@ -44,16 +44,27 @@ Resources:
                 Resource: 'arn:aws:dynamodb:*:*:table/s3-trigger-db'
 
   # lambda function to manage s3 events
-    LambdaFunction:
-     Type: AWS::Lambda::Function
-     Properties:
-        FunctionName: !Sub '${Environment}-S3lambdaTrigger'
-        Handler: main.lambda_handler
-        Role: !GetAtt LambdaExecutionRole.Arn
-        Runtime: python3.13
-        Code: ../src
-# S3 bucket to store files
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-S3lambdaTrigger'
+      Handler: main.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.13
+      Code: ../src
+
+  # Permission for S3 to invoke Lambda
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub 'arn:aws:s3:::${Environment}-${BucketName}'
+
+  # S3 bucket to store files
   S3Bucket:
+    DependsOn: LambdaInvokePermission
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub '${Environment}-${BucketName}'
